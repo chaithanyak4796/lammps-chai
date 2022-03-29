@@ -346,3 +346,5 @@ style_pair.h
 style_reader.h
 style_region.h
 
+# Netbeans
+nbproject/*
