@@ -211,6 +211,9 @@ struct reax_system {
   LR_lookup_table **LR;
 
   int omp_active;
+  
+  //* Edits by Chai
+  bool valence_mod = false;
 };
 
 /* system control parameters */

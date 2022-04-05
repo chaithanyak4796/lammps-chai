@@ -39,7 +39,7 @@ Reactive MD-force field: Combustion C/H/O force field + atom type N(May11, 2018)
    0.0000 !not used
    1.0000 !not used
    2.6962 !p(coa3)
-   2.0000 !triple bond on/off (0 for CO, 1 for CO and N2, 2 for all)
+   2.0000 !triple bond on/off (0 for CO, 1 for all, 2 for CO and N2)
 4   ! Nr of atoms; atomID;ro(sigma); Val;atom mass;Rvdw;Dij;gamma
       	 alfa;gamma(w);Val(angle);p(ovun5);n.u.;chiEEM;etaEEM;n.u.
        	 ro(pipi);p(lp2);Heat

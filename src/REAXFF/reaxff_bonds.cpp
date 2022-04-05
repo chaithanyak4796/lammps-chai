@@ -38,14 +38,18 @@ namespace ReaxFF {
     int start_i, end_i;
     int type_i, type_j;
     double ebond, pow_BOs_be2, exp_be12, CEbo;
-    double gp3, gp4, gp7, gp10, gp37;
+    double gp3, gp4, gp7, gp10;  //* Edit by Chai
     double exphu, exphua1, exphub1, exphuov, hulpov, estriph;
     double decobdbo, decobdboua, decobdboub;
     single_body_parameters *sbp_i, *sbp_j;
     two_body_parameters *twbp;
     bond_order_data *bo_ij;
     reax_list *bonds;
-
+    
+    bool trip_stab = false;   //* Edit by Chai
+    bool debug_loc = false;    //* Edit by Chai
+    int gp37, gp39;                  //* Edit by Chai   
+    
     bonds = (*lists) + BONDS;
     gp3 = system->reax_param.gp.l[3];
     gp4 = system->reax_param.gp.l[4];
@@ -103,10 +107,42 @@ namespace ReaxFF {
         bo_ij->Cdbopi2 -= (CEbo + twbp->De_pp);
 
         /* Stabilisation terminal triple bond */
+        //* Edit by Chai
+        trip_stab = false;
         if (bo_ij->BO >= 1.00) {
-          if (gp37 == 2 ||
-               (sbp_i->mass == 12.0000 && sbp_j->mass == 15.9990) ||
-               (sbp_j->mass == 12.0000 && sbp_i->mass == 15.9990)) {
+            if(system->valence_mod == false) { //* All other potentials except CHON-2019
+                trip_stab = false;
+                if (gp37 == 2 || 
+                        (sbp_i->mass == 12.0000 && sbp_j->mass == 15.9990) ||
+                        (sbp_j->mass == 12.0000 && sbp_i->mass == 15.9990)) 
+                    trip_stab = true;
+            }
+          
+            else if(system->valence_mod == true){   //* CHON-2019
+              trip_stab = false;
+              gp39 = (int) system->reax_param.gp.l[39];
+              //if(debug_loc) fprintf(stderr, "vpar(40) = %d\n", gp39);
+              if(gp39 == 0) { //* Only CO
+                  if ( (sbp_i->mass == 12.0000 && sbp_j->mass == 15.9990) || (sbp_j->mass == 12.0000 && sbp_i->mass == 15.9990) ) 
+                      trip_stab = true;
+              }
+              else if (gp39 == 1) //* All triple bonds
+                  trip_stab = true;
+              else if (gp39 == 2) {   //* Only CO and N2
+                  if ( (sbp_i->mass == 12.0000 && sbp_j->mass == 15.9990) || (sbp_j->mass == 12.0000 && sbp_i->mass == 15.9990) ) 
+                      trip_stab = true;
+                  else if( (sbp_i->mass == 14.0000 && sbp_j->mass == 14.0000) )
+                      trip_stab = true;
+                  else
+                      trip_stab = false;
+              }
+              else
+                  trip_stab = false;
+            }
+          }
+          if(debug_loc) fprintf(stderr, "%8.4f  %8.4f : BO = %f, trip_stab = %d\n", sbp_i->mass, sbp_j->mass, bo_ij->BO, trip_stab);     
+          
+          if(trip_stab == true) {
             exphu = exp(-gp7 * SQR(bo_ij->BO - 2.50));
             exphua1 = exp(-gp3 * (workspace->total_bond_order[i]-bo_ij->BO));
             exphub1 = exp(-gp3 * (workspace->total_bond_order[j]-bo_ij->BO));
@@ -135,4 +171,4 @@ namespace ReaxFF {
       }
     }
   }
-}
+

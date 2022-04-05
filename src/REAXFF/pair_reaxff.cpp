@@ -269,6 +269,8 @@ void PairReaxFF::settings(int narg, char **arg)
 
 void PairReaxFF::coeff(int nargs, char **args)
 {
+  bool debug_loc = true;  //* Edit by Chai
+  
   if (!allocated) allocate();
 
   if (nargs != 3 + atom->ntypes)
@@ -282,6 +284,17 @@ void PairReaxFF::coeff(int nargs, char **args)
   // read ffield file
 
   Read_Force_Field(args[2], &(api->system->reax_param), api->control, world);
+  
+  //* Edits by Chai
+  // If the force field is CHON-2019, activate the flag to modify valence angle terms [Refer CHO-2016]
+  if (api->system->reax_param.gp.n_global == 40 && api->system->reax_param.num_atom_types == 4) {
+      if (!strcmp(api->system->reax_param.sbp[0].name,"C") && !strcmp(api->system->reax_param.sbp[1].name,"H") &&
+              !strcmp(api->system->reax_param.sbp[2].name, "O") && !strcmp(api->system->reax_param.sbp[3].name, "N")) {
+          //if(debug_loc) fprintf(stderr, "Found CHON-2019 potential. Activating valence_mod \n");
+          api->system->valence_mod = true;
+      }
+  }
+  
 
   // read args that map atom types to elements in potential file
   // map[i] = which element the Ith atom type is, -1 if "NULL"

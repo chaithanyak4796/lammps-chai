@@ -91,10 +91,15 @@ namespace ReaxFF {
     double f7_ij, f7_jk, f8_Dj, f9_Dj;
     double Ctheta_0, theta_0, theta_00, theta, cos_theta, sin_theta;
     double BOA_ij, BOA_jk;
+    double loc_Delta_boc;  //* Added by Chai
+    double SBO_mod, dSBO1_mod, SBO2_mod, CSBO2_mod;
 
     // Tallying variables
     double eng_tmp, fi_tmp[3], fj_tmp[3], fk_tmp[3];
     double delij[3], delkj[3];
+    
+    //* Added by Chai for debugging
+    bool debug_loc = false;
 
     three_body_header *thbh;
     three_body_parameters *thbp;
@@ -121,6 +126,7 @@ namespace ReaxFF {
       p_val3 = system->reax_param.sbp[type_j].p_val3;
       p_val5 = system->reax_param.sbp[type_j].p_val5;
 
+      //* Eqn 13d in 2008-SI
       SBOp = 0, prod_SBO = 1;
       for (t = start_j; t < end_j; ++t) {
         bo_jt = &(bonds->select.bond_list[t].bo_data);
@@ -139,9 +145,11 @@ namespace ReaxFF {
         dSBO2 = (prod_SBO - 1) * (1 - p_val8 * workspace->dDelta_lp[j]);
       }
 
-      SBO = SBOp + (1 - prod_SBO) * (-workspace->Delta_boc[j] - p_val8 * vlpadj);
-      dSBO1 = -8 * prod_SBO * (workspace->Delta_boc[j] + p_val8 * vlpadj);
-
+      //* Edit by Chai: Computing SBO with and without modifications. Modifications: Refer to 2008-SI
+      //* No modifications
+      SBO   = SBOp + (1 - prod_SBO) * (-workspace->Delta_boc[j] - p_val8 * vlpadj);    //* Eqn 13d in 2008-SI
+      dSBO1 = -8 * prod_SBO * (workspace->Delta_boc[j] + p_val8 * vlpadj);           //* Eqn 13d in 2008-SI
+      
       if (SBO <= 0)
         SBO2 = 0, CSBO2 = 0;
       else if (SBO > 0 && SBO <= 1) {
@@ -149,11 +157,32 @@ namespace ReaxFF {
         CSBO2 = p_val9 * pow(SBO, p_val9 - 1);
       }
       else if (SBO > 1 && SBO < 2) {
-        SBO2 = 2 - pow(2-SBO, p_val9);
+        SBO2  = 2 - pow(2-SBO, p_val9);
         CSBO2 = p_val9 * pow(2 - SBO, p_val9 - 1);
       }
       else
         SBO2 = 2, CSBO2 = 0;
+      
+      //* Modifications to SBO. Refer CHO-2016 Eqn 4
+      //* These mods should be disabled for C-C-C angles. 
+      //* That's why I created separate variables that can be assigned when adding to data->my_en.e_ang
+      if(system->valence_mod == true) {
+          SBO_mod = SBOp + (1 - prod_SBO) * (- p_val8 * vlpadj);    //* Eqn 13d in 2008-SI
+        dSBO1_mod = -8 * prod_SBO * ( p_val8 * vlpadj);             //* Eqn 13d in 2008-SI
+        
+        if (SBO_mod <= 0)
+            SBO2_mod = 0, CSBO2_mod = 0;
+        else if (SBO_mod > 0 && SBO_mod <= 1) {
+            SBO2_mod = pow(SBO_mod, p_val9);
+            CSBO2_mod = p_val9 * pow(SBO_mod, p_val9 - 1);
+        }
+        else if (SBO_mod > 1 && SBO_mod < 2) {
+          SBO2_mod  = 2 - pow(2-SBO_mod, p_val9);
+          CSBO2_mod = p_val9 * pow(2 - SBO_mod, p_val9 - 1);
+        }
+        else
+          SBO2_mod = 2, CSBO2_mod = 0;
+      } //* Done with modifications.
 
       expval6 = exp(p_val6 * workspace->Delta_boc[j]);
 
@@ -197,6 +226,30 @@ namespace ReaxFF {
             k        = pbond_jk->nbr;
             type_k   = system->my_atoms[k].type;
             p_ijk    = &(thb_intrs->select.three_body_list[num_thb_intrs]);
+            
+            //* Added by Chai : Modify the SBO for CHON potential, but leave it for C-C-C interactions
+            if(system->valence_mod == true)
+            {
+                if (debug_loc) fprintf(stderr, "Check if valence modifications needs to be applied\n");
+                if (debug_loc) fprintf(stderr, "Atoms in the angle: %d %d %d\n", system->my_atoms[i].type, system->my_atoms[j].type, system->my_atoms[k].type);
+                
+                if( (system->my_atoms[i].type == 0) && (system->my_atoms[j].type == 0) && (system->my_atoms[k].type == 0) ) {             
+                    if(debug_loc) fprintf(stderr, "C-C-C angle found \n");
+                    continue;
+                }
+                else if ((system->my_atoms[i].type == 3) || (system->my_atoms[j].type == 3) || (system->my_atoms[k].type == 3)) {
+                    if(debug_loc) fprintf(stderr, "Angle found containing N atom \n");
+                    continue;
+                }
+                else {
+                    if(debug_loc) fprintf(stderr, " Apply Valence modifications\n");
+                    SBO   = SBO_mod;
+                    dSBO1 = dSBO1_mod;
+                    SBO2  = SBO2_mod;
+                    CSBO2 = CSBO2_mod;
+                }
+                
+            }
 
             Calculate_Theta(pbond_ij->dvec, pbond_ij->d,
                              pbond_jk->dvec, pbond_jk->d,

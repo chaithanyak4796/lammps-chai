@@ -348,3 +348,6 @@ style_region.h
 
 # Netbeans
 nbproject/*
+
+# Misc
+REAXFF/Compare_files.sh
