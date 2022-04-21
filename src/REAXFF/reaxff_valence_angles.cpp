@@ -93,7 +93,7 @@ namespace ReaxFF {
     double BOA_ij, BOA_jk;
     double loc_Delta_boc;  //* Added by Chai
     double SBO_mod, dSBO1_mod, SBO2_mod, CSBO2_mod;
-
+    
     // Tallying variables
     double eng_tmp, fi_tmp[3], fj_tmp[3], fk_tmp[3];
     double delij[3], delkj[3];
@@ -117,7 +117,7 @@ namespace ReaxFF {
     num_thb_intrs = 0;
 
 
-    for (j = 0; j < system->N; ++j) {
+    for (j = 0; j < system->N; ++j) {      //* Central atom - start
       type_j = system->my_atoms[j].type;
       if (type_j < 0) continue;
       start_j = Start_Index(j, bonds);
@@ -142,14 +142,14 @@ namespace ReaxFF {
         dSBO2 = prod_SBO - 1;
       } else {
         vlpadj = workspace->nlp[j];
-        dSBO2 = (prod_SBO - 1) * (1 - p_val8 * workspace->dDelta_lp[j]);
+        dSBO2 = (prod_SBO - 1) * (1 - p_val8 * workspace->dDelta_lp[j]);   //* d(SBO)/d(Delta_j)
       }
 
       //* Edit by Chai: Computing SBO with and without modifications. Modifications: Refer to 2008-SI
       //* No modifications
-      SBO   = SBOp + (1 - prod_SBO) * (-workspace->Delta_boc[j] - p_val8 * vlpadj);    //* Eqn 13d in 2008-SI
-      dSBO1 = -8 * prod_SBO * (workspace->Delta_boc[j] + p_val8 * vlpadj);           //* Eqn 13d in 2008-SI
-      
+      SBO   = SBOp + (1 - prod_SBO) * (-workspace->Delta_boc[j] - p_val8 * vlpadj);    //* Eqn 13d in 2008-SI   //* Bug alert? Should be workspace->Delta_val[j]?
+      dSBO1 = -8 * prod_SBO * (workspace->Delta_boc[j] + p_val8 * vlpadj);             //* Eqn 13d in 2008-SI
+                                                                                       //* d(SBO)/d(BO_ij) * (1/BO_ij)^7
       if (SBO <= 0)
         SBO2 = 0, CSBO2 = 0;
       else if (SBO > 0 && SBO <= 1) {
@@ -163,6 +163,7 @@ namespace ReaxFF {
       else
         SBO2 = 2, CSBO2 = 0;
       
+
       //* Modifications to SBO. Refer CHO-2016 Eqn 4
       //* These mods should be disabled for C-C-C angles. 
       //* That's why I created separate variables that can be assigned when adding to data->my_en.e_ang
@@ -182,11 +183,16 @@ namespace ReaxFF {
         }
         else
           SBO2_mod = 2, CSBO2_mod = 0;
+        
+        /*if (debug_loc and j < system->n) {
+            fprintf(stderr, "SBO2     for central atom # %2d = %8.4f\n", j, SBO2);
+            fprintf(stderr, "SBO2_mod for central atom # %2d = %8.4f\n", j, SBO2_mod);
+        }*/
       } //* Done with modifications.
 
       expval6 = exp(p_val6 * workspace->Delta_boc[j]);
 
-      for (pi = start_j; pi < end_j; ++pi) {
+      for (pi = start_j; pi < end_j; ++pi) {        //* atom_i : start
         Set_Start_Index(pi, num_thb_intrs, thb_intrs);
         pbond_ij = &(bonds->select.bond_list[pi]);
         bo_ij = &(pbond_ij->bo_data);
@@ -194,11 +200,11 @@ namespace ReaxFF {
 
 
         if (BOA_ij/*bo_ij->BO*/ > 0.0 &&
-             (j < system->n || pbond_ij->nbr < system->n)) {
+             (j < system->n || pbond_ij->nbr < system->n)) { //* is i-j bonded? : start
           i = pbond_ij->nbr;
           type_i = system->my_atoms[i].type;
 
-          for (pk = start_j; pk < pi; ++pk) {
+          for (pk = start_j; pk < pi; ++pk) {  
             start_pk = Start_Index(pk, thb_intrs);
             end_pk = End_Index(pk, thb_intrs);
 
@@ -219,7 +225,7 @@ namespace ReaxFF {
               }
           }
 
-          for (pk = pi+1; pk < end_j; ++pk) {
+          for (pk = pi+1; pk < end_j; ++pk) {   //* atom_k : start
             pbond_jk = &(bonds->select.bond_list[pk]);
             bo_jk    = &(pbond_jk->bo_data);
             BOA_jk   = bo_jk->BO - control->thb_cut;
@@ -228,28 +234,32 @@ namespace ReaxFF {
             p_ijk    = &(thb_intrs->select.three_body_list[num_thb_intrs]);
             
             //* Added by Chai : Modify the SBO for CHON potential, but leave it for C-C-C interactions
+            //* atom types : 0-C; 1-H; 2-O; 3-N 
             if(system->valence_mod == true)
             {
-                if (debug_loc) fprintf(stderr, "Check if valence modifications needs to be applied\n");
-                if (debug_loc) fprintf(stderr, "Atoms in the angle: %d %d %d\n", system->my_atoms[i].type, system->my_atoms[j].type, system->my_atoms[k].type);
-                
+                //if (debug_loc) fprintf(stderr, "Check if valence modifications needs to be applied\n");
+                //if (debug_loc) fprintf(stderr, "Atoms in the angle: %d %d %d\n", system->my_atoms[i].type, system->my_atoms[j].type, system->my_atoms[k].type);
+                //if (debug_loc) fprintf(stderr, "Before_mod :  SBO2 for angle between %2d, %2d and %2d = %8.4f\n", i, j, k, SBO2);
                 if( (system->my_atoms[i].type == 0) && (system->my_atoms[j].type == 0) && (system->my_atoms[k].type == 0) ) {             
-                    if(debug_loc) fprintf(stderr, "C-C-C angle found \n");
-                    continue;
+                    //if(debug_loc) fprintf(stderr, "C-C-C angle found \n");
                 }
                 else if ((system->my_atoms[i].type == 3) || (system->my_atoms[j].type == 3) || (system->my_atoms[k].type == 3)) {
-                    if(debug_loc) fprintf(stderr, "Angle found containing N atom \n");
-                    continue;
+                    //if(debug_loc) fprintf(stderr, "Angle found containing N atom \n");
                 }
                 else {
-                    if(debug_loc) fprintf(stderr, " Apply Valence modifications\n");
+                    //if(debug_loc) fprintf(stderr, " Apply Valence modifications\n");
                     SBO   = SBO_mod;
                     dSBO1 = dSBO1_mod;
+                    dSBO2 = 0;         //* Added this extra line for lack of delta_j in SBO
                     SBO2  = SBO2_mod;
                     CSBO2 = CSBO2_mod;
-                }
+                }  
                 
-            }
+                /*if (debug_loc && j < system-> n and i < system-> n and k < system->n) {
+                    fprintf(stderr, "After_mod   : SBO2 for angle between %2d, %2d and %2d = %8.4f\n", i, j, k, SBO2);
+                }*/ 
+            } //* End of Chai mods
+
 
             Calculate_Theta(pbond_ij->dvec, pbond_ij->d,
                              pbond_jk->dvec, pbond_jk->d,
@@ -272,11 +282,11 @@ namespace ReaxFF {
             if ((j < system->n) && (BOA_jk > 0.0) &&
                 (bo_ij->BO > control->thb_cut) &&
                 (bo_jk->BO > control->thb_cut) &&
-                (bo_ij->BO * bo_jk->BO > control->thb_cutsq)) {
+                (bo_ij->BO * bo_jk->BO > control->thb_cutsq)) {  //* Bonded Angle? : start
               thbh = &(system->reax_param.thbp[type_i][type_j][type_k]);
 
               for (cnt = 0; cnt < thbh->cnt; ++cnt) {
-                if (fabs(thbh->prm[cnt].p_val1) > 0.001) {
+                if (fabs(thbh->prm[cnt].p_val1) > 0.001) {   //* Find legal three-body params for i,j,k : start
                   thbp = &(thbh->prm[cnt]);
 
                   /* ANGLE ENERGY */
@@ -287,16 +297,16 @@ namespace ReaxFF {
                   theta_00 = thbp->theta_00;
 
                   exp3ij = exp(-p_val3 * pow(BOA_ij, p_val4));
-                  f7_ij = 1.0 - exp3ij;
+                  f7_ij = 1.0 - exp3ij;                                           //* Eqn 13b in 2008-SI
                   Cf7ij = p_val3 * p_val4 * pow(BOA_ij, p_val4 - 1.0) * exp3ij;
 
                   exp3jk = exp(-p_val3 * pow(BOA_jk, p_val4));
                   f7_jk = 1.0 - exp3jk;
-                  Cf7jk = p_val3 * p_val4 * pow(BOA_jk, p_val4 - 1.0) * exp3jk;
+                  Cf7jk = p_val3 * p_val4 * pow(BOA_jk, p_val4 - 1.0) * exp3jk;   //* Eqn 13b in 2008-SI
 
                   expval7 = exp(-p_val7 * workspace->Delta_boc[j]);
                   trm8 = 1.0 + expval6 + expval7;
-                  f8_Dj = p_val5 - ((p_val5 - 1.0) * (2.0 + expval6) / trm8);
+                  f8_Dj = p_val5 - ((p_val5 - 1.0) * (2.0 + expval6) / trm8);      //* Eqn 13c in 2008-SI
                   Cf8j = ((1.0 - p_val5) / SQR(trm8)) *
                     (p_val6 * expval6 * trm8 -
                       (2.0 + expval6) * (p_val6*expval6 - p_val7*expval7));
@@ -419,14 +429,14 @@ namespace ReaxFF {
                     system->pair_ptr->v_tally3(i,j,k,fi_tmp,fk_tmp,delij,delkj);
                   }
                 }
-              }
+              }  //* Find legal three-body params for i,j,k : end
             }
-          }
-        }
+          } //* Bonded-Angle? : end
+        }  //* atom_k : end
 
         Set_End_Index(pi, num_thb_intrs, thb_intrs);
-      }
-    }
+      } //* is i-j bonded? : end
+    }  //* atom_i : end
 
     if (num_thb_intrs >= thb_intrs->num_intrs * DANGER_ZONE) {
       workspace->realloc.num_3body = num_thb_intrs;

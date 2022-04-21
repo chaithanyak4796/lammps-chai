@@ -439,18 +439,18 @@ namespace ReaxFF {
       if (type_j < 0) continue;
       sbp_j = &(system->reax_param.sbp[type_j]);
 
-      workspace->Delta[j] = workspace->total_bond_order[j] - sbp_j->valency;
-      workspace->Delta_e[j] = workspace->total_bond_order[j] - sbp_j->valency_e;
-      workspace->Delta_boc[j] = workspace->total_bond_order[j] -
-        sbp_j->valency_boc;
-      workspace->Delta_val[j] = workspace->total_bond_order[j] -
+      workspace->Delta[j] = workspace->total_bond_order[j] - sbp_j->valency;      //* Eqn 6   in 2008-SI
+      workspace->Delta_e[j] = workspace->total_bond_order[j] - sbp_j->valency_e;  //* Eqn 7   in 2008-SI
+      workspace->Delta_boc[j] = workspace->total_bond_order[j] -                  //* Eqn 3b  in 2008-SI
+        sbp_j->valency_boc;                                                                  
+      workspace->Delta_val[j] = workspace->total_bond_order[j] -                  //* Eqn 13e in 2008-SI
         sbp_j->valency_val;
 
       workspace->vlpex[j] = workspace->Delta_e[j] -
         2.0 * (int)(workspace->Delta_e[j]/2.0);
       explp1 = exp(-p_lp1 * SQR(2.0 + workspace->vlpex[j]));
-      workspace->nlp[j] = explp1 - (int)(workspace->Delta_e[j] / 2.0);
-      workspace->Delta_lp[j] = sbp_j->nlp_opt - workspace->nlp[j];
+      workspace->nlp[j] = explp1 - (int)(workspace->Delta_e[j] / 2.0);          //* Eqn 8 in 2008-SI //* Bug alert? : Terms should be added
+      workspace->Delta_lp[j] = sbp_j->nlp_opt - workspace->nlp[j];              //* Eqn 9 in 2008-SI
       workspace->Clp[j] = 2.0 * p_lp1 * explp1 * (2.0 + workspace->vlpex[j]);
       workspace->dDelta_lp[j] = workspace->Clp[j];
 

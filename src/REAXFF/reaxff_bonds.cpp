@@ -140,7 +140,7 @@ namespace ReaxFF {
                   trip_stab = false;
             }
           }
-          if(debug_loc) fprintf(stderr, "%8.4f  %8.4f : BO = %f, trip_stab = %d\n", sbp_i->mass, sbp_j->mass, bo_ij->BO, trip_stab);     
+          //if(debug_loc) fprintf(stderr, "%8.4f  %8.4f : BO = %f, trip_stab = %d\n", sbp_i->mass, sbp_j->mass, bo_ij->BO, trip_stab);     
           
           if(trip_stab == true) {
             exphu = exp(-gp7 * SQR(bo_ij->BO - 2.50));
