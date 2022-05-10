@@ -1,0 +1,9 @@
+* This is a simple test case to demonstrate the differences in the CHO structure predicted by the reaxFF-CHO-2008 and the reaxFF-CHON-2019 IPs.
+* The old IP predicts the molecular angle to be 180 degrees while the new IP predicts a value close to 124 degrees which is expected from DFT.
+* The files to replicate the simulations are briefly described below:
+
+- Gen-CHO.py is a python script to generate the structure file for lammps. The inter-nuclear distances and the angles can be modified in here.
+- in.CHO     is the lammps input script file to minimize the energies in the structure for the OLD IP. The fire minimization technique is implemented.
+- in.CHON    is	the lammps input script	file to	minimize the energies in the structure for the NEW IP. The fire minimization technique is implemented
+
+* The lammps program should generate a xyz file at every few timesteps that can be used to verify the angles externally

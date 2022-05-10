@@ -449,7 +449,7 @@ namespace ReaxFF {
       workspace->vlpex[j] = workspace->Delta_e[j] -
         2.0 * (int)(workspace->Delta_e[j]/2.0);
       explp1 = exp(-p_lp1 * SQR(2.0 + workspace->vlpex[j]));
-      workspace->nlp[j] = explp1 - (int)(workspace->Delta_e[j] / 2.0);          //* Eqn 8 in 2008-SI //* Bug alert? : Terms should be added
+      workspace->nlp[j] = explp1 - (int)(workspace->Delta_e[j] / 2.0);          //* Eqn 8 in 2008-SI 
       workspace->Delta_lp[j] = sbp_j->nlp_opt - workspace->nlp[j];              //* Eqn 9 in 2008-SI
       workspace->Clp[j] = 2.0 * p_lp1 * explp1 * (2.0 + workspace->vlpex[j]);
       workspace->dDelta_lp[j] = workspace->Clp[j];

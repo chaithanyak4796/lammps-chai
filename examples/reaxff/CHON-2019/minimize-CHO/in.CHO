@@ -1,0 +1,26 @@
+## Minimize CHO
+
+units      real
+dimension  3
+boundary   p p p
+atom_style charge
+
+read_data CHO-pos.lmp
+
+pair_style reaxff NULL 
+pair_coeff * * ffield.reax.cho C H O
+fix        qeq all qeq/reaxff 1 0.0 10.0 1.0e-6 reaxff
+
+compute   PE all pe
+compute   Temp all temp
+
+thermo_style custom step time fmax fnorm lx ly lz
+thermo 100
+
+dump         coords_dump all xyz 50 CHO-min.xyz
+dump_modify  coords_dump element C H O
+
+min_style fire
+minimize 0.0 1.0e-7 100000 1000000
+
+run 0

@@ -351,3 +351,8 @@ nbproject/*
 
 # Misc
 REAXFF/Compare_files.sh
+
+# Shared libs
+Obj_shared_mpi/
+liblammps.so
+liblammps_mpi.so
